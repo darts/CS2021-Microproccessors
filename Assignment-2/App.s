@@ -1,39 +1,12 @@
 	AREA	AsmTemplate, CODE, READONLY
 	IMPORT	main
 
-; sample program makes the 4 LEDs P1.16, P1.17, P1.18, P1.19 go on and off in sequence
-; (c) Mike Brady, 2011 -- 2019.
-
 	EXPORT	start
 start
 
 IO_DIR	EQU	0xE0028018
 IO_SET	EQU	0xE0028014
 IO_CLR	EQU	0xE002801C
-
-;	ldr	r1,=IO1DIR
-;	ldr	r2,=0x000f0000	;select P1.19--P1.16
-;	str	r2,[r1]		;make them outputs
-;	ldr	r1,=IO1SET
-;	str	r2,[r1]		;set them to turn the LEDs off
-;	ldr	r2,=IO1CLR
-; r1 points to the SET register
-; r2 points to the CLEAR register
-
-;	ldr	r5,=0x00100000	; end when the mask reaches this value
-;wloop	ldr	r3,=0x00010000	; start with P1.16.
-;floop	str	r3,[r2]	   	; clear the bit -> turn on the LED
-;
-;delay for about a half second
-;	ldr	r4,=4000000			; timerDelay = A NUMBER
-;dloop	subs	r4,r4,#1	; while(timerDelay-- > 0){
-;	bne	dloop				; }
-;
-;	str	r3,[r1]		;set the bit -> turn off the LED
-;	mov	r3,r3,lsl #1	;shift up to next bit. P1.16 -> P1.17 etc.
-;	cmp	r3,r5
-;	bne	floop
-;	b	wloop
 	
 	;convert to bcd		
 	LDR R0, =binNum			; load num
@@ -43,13 +16,13 @@ IO_CLR	EQU	0xE002801C
 	
 	CMP R1, #0				; if (num < 0)
 	BEQ isPositive 			; {
-	LDR R2, =0xA			; 		minus = 2_1010
+	LDR R2, =0x5			; 		minus = 2_1010 (inverse)
 	LDR R3, =wrdSpace		; 		addr = wrdSpace.addr
 	STRB R2, [R3]			; 		storeSign()
 	NEG R0, R0				;		num.2's complement()
 	B isNegative			; } 
 isPositive 					; else{
-	LDR R2, =0xB			; 		plus = 2_1011
+	LDR R2, =0xD			; 		plus = 2_1011 (inverse)
 	LDR R3, =wrdSpace		; 		addr = wrdSpace.addr
 	STRB R2, [R3]			; 		storeSign()
 isNegative					; }
@@ -100,7 +73,20 @@ charFound					; 		}
 	STRB R4, [R6, R7]		;			storeSign(offset)
 	B incStuff				;		}
 notZero						;		else{
-	STRB R4, [R6, R7]		;			storeSign(offset)
+	LDR R8, =4				; 			i = 4
+	LDR R9, =0				; 			maskRes = 0
+	LDR R10, =0				; 			invertedNum = 0
+numNotAdjusted				; 			while (i > 4)
+	CMP R8, #0				; 			{ 
+	BEQ numAdjusted			; 				
+	AND R9, R4, #1			; 				get first bit
+	LSL R10, #1				; 				shift inverted left 
+	ORR R10, R10, R9		; 				add bit
+	LSR R4, #1				; 				shift old right 
+	SUB R8, R8, #1			; 				i--
+	B numNotAdjusted		; 			}
+numAdjusted					; 
+	STRB R10, [R6, R7]		;			storeSign(offset)
 incStuff					;		}
 							;
 	ADD R7, R7, #1			;		offset++
@@ -108,7 +94,7 @@ incStuff					;		}
 	B charsLeft				;	
 noCharsLeft					;	}
 	
-	MOV R2, R1				
+	ADD R2, R1, #1			; length += 1	
 	;loading stuff for displaying
 	LDR R0, =IO_DIR
 	LDR R1, =0x000F0000		; select P1.19 through P1.16
@@ -119,29 +105,42 @@ noCharsLeft					;	}
 							; R0 = set reg
 							; R1 = clr reg
 	
-foreverLoop
-	LDR R3, =0
-	LDR R4, =wrdSpace
-	LDRB R5, [R4, R3]
-	LSL R5, #16
-	STR	R5,	[R1]
+	LDR R3, =0				; tmpLength = 0
+foreverLoop					; while (true) {
+	LDR R4, =wrdSpace		; 		addr = wrdSpace.addr
+	LDR R5, =0x000F0000		;		zeroMask = mask
+	STR R5, [R0]			; 		setReg = mask
 	
-	LDR	R5,=4000000	
-dloop	
-	SUBS R5, R5 ,#1	
-	BNE	dloop
+	LDR	R5,=2000000			; 		timerDelay
+delloop						; 		while(timerDelay > 0){
+	SUBS R5, R5 ,#1			; 			timerDelay--
+	BNE	delloop				; 		}
 	
-	CMP R3, R2
-	BNE foreverLoop
-	LDR R5, =0x000F0000
-	STR R5, [R0]
+	LDRB R5, [R4, R3]		; 		load next char with offset = tmplength
+	LSL R5, #16				; 		shift left by 16 bits
+	STR	R5,	[R1]			; 		set the leds
 	
-	B foreverLoop
+	LDR	R5,=7000000			; 		timerDelay
+dloop						; 		while (timerDelay > 0){
+	SUBS R5, R5 ,#1			; 			timerDelay--
+	BNE	dloop				; 		}
+	
+	ADD R3, R3, #1			; 		tmpLength++
+	CMP R3, R2				; 		if (tmpLength == length)
+	BNE foreverLoop			; 		{
+	LDR R3, =0				;			tmpLength = 0
+	LDR R5, =0x000F0000		;			load 0
+	STR R5, [R0]			;			clear bits / turn off LEDs
+	LDR	R5,=4000000			;			timerDelay
+deloop						;			while (timerDelay > 0){
+	SUBS R5, R5 ,#1			;				timerDelay--
+	BNE	deloop				;			}
+	B foreverLoop			; }
 stop	B	stop
 
 	AREA TestData, DATA, READWRITE
 
-binNum DCD 0x10				; the binary number to be converted
+binNum DCD 0x508			; the binary number to be converted
 
 wrdSpace SPACE	12 			; assign 12 bytes of free space to store the characters	
 	END
