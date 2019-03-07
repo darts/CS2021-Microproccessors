@@ -10,31 +10,8 @@ start
 IO1DIR	EQU	0xE0028018
 IO1SET	EQU	0xE0028014
 IO1CLR	EQU	0xE002801C
+IO1PIN	EQU	0xE0028010
 
-	ldr	r1,=IO1DIR
-	ldr	r2,=0x000f0000	;select P1.19--P1.16
-	str	r2,[r1]		;make them outputs
-	ldr	r1,=IO1SET
-	str	r2,[r1]		;set them to turn the LEDs off
-	ldr	r2,=IO1CLR
-; r1 points to the SET register
-; r2 points to the CLEAR register
-
-	ldr	r5,=0x00100000	; end when the mask reaches this value
-wloop	ldr	r3,=0x00010000	; start with P1.16.
-floop	str	r3,[r2]	   	; clear the bit -> turn on the LED
-
-;delay for about a half second
-	ldr	r4,=4000000
-dloop	subs	r4,r4,#1
-	bne	dloop
-
-	str	r3,[r1]		;set the bit -> turn off the LED
-	mov	r3,r3,lsl #1	;shift up to next bit. P1.16 -> P1.17 etc.
-	cmp	r3,r5
-	bne	floop
-	b	wloop
-stop	B	stop
 
 
 getPress
@@ -46,7 +23,7 @@ getPress
 	; R4 = button addr
 	; R5 = button values
 	
-	LDR R0, =IO1DIR		; load button addr
+	LDR R0, =IO1PIN		; load button addr
 	LDR R0, [R0]		; load originalValue
 	LDR R1, 0xF00000	; load mask
 	AND R0, R1, R0		; originalValue &= mask
@@ -58,7 +35,7 @@ getPress
 pressedGetPress			; else{
 	LDR R2, =1			; 		isLongPress = 1
 	LDR R3, =4000000	; 		timerDelay
-	LDR R4, =IO1DIR		;		load button addr
+	LDR R4, =IO1PIN		;		load button addr
 
 waitTimeGetPress
 	SUBS R3, R3, #1		;		while(timerdelay)
