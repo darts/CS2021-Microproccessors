@@ -19,15 +19,15 @@ ARM Macro Assembler    Page 1
    10 00000000 E0028010 
                        IO1PIN  EQU              0xE0028010
    11 00000000         
-   12 00000000 E59F1144        LDR              R1, =IO1DIR
+   12 00000000 E59F1198        LDR              R1, =IO1DIR
    13 00000004 E3A0280F        LDR              R2, =0x000F0000 ; select P1.19 
                                                             through P1.16
    14 00000008 E5812000        STR              R2, [R1]    ; set as outputs
-   15 0000000C E59F113C        LDR              R1, =IO1SET ; 
+   15 0000000C E59F1190        LDR              R1, =IO1SET ; 
    16 00000010 E5812000        STR              R2, [R1]    ; set the bits to t
                                                             urn off the LEDs
-   17 00000014 E59F2138        ldr              r2, =IO1CLR
-   18 00000018 E59F3138        ldr              r3, =IO1PIN
+   17 00000014 E59F218C        ldr              r2, =IO1CLR
+   18 00000018 E59F318C        ldr              r3, =IO1PIN
    19 0000001C         
    20 0000001C         foreverLoop
    21 0000001C EB000014        BL               getPress
@@ -43,25 +43,25 @@ ARM Macro Assembler    Page 1
    31 00000020         ;EOR R0, R0, R1
    32 00000020         
    33 00000020         
-   34 00000020 E3700014        CMP              R0, #-20
+   34 00000020 E3500014        CMP              R0, #20
    35 00000024 1A000002        BNE              foreverLoop1
    36 00000028 E3E00007        LDR              R0, =-8
-   37 0000002C EB00003B        BL               dispNum
+   37 0000002C EB000046        BL               flashNum
    38 00000030 EAFFFFF9        B                foreverLoop
    39 00000034         foreverLoop1
-   40 00000034 E3700015        CMP              R0, #-21
+   40 00000034 E3500015        CMP              R0, #21
    41 00000038 1A000002        BNE              foreverLoop2
    42 0000003C E3A00004        LDR              R0, =4
-   43 00000040 EB000036        BL               dispNum
+   43 00000040 EB000041        BL               flashNum
    44 00000044 EAFFFFF4        B                foreverLoop
    45 00000048         foreverLoop2
-   46 00000048 E3700016        CMP              R0, #-22
+   46 00000048 E3500016        CMP              R0, #22
    47 0000004C 1A000002        BNE              foreverLoop3
    48 00000050 E3A00002        LDR              R0, =2
-   49 00000054 EB000031        BL               dispNum
+   49 00000054 EB00003C        BL               flashNum
    50 00000058 EAFFFFEF        B                foreverLoop
    51 0000005C         foreverLoop3
-   52 0000005C E3700017        CMP              R0, #-23
+   52 0000005C E3500017        CMP              R0, #23
    53 00000060 1AFFFFED        BNE              foreverLoop
 
 
@@ -70,7 +70,7 @@ ARM Macro Assembler    Page 2
 
 
    54 00000064 E3A00001        LDR              R0, =1
-   55 00000068 EB00002C        BL               dispNum
+   55 00000068 EB000037        BL               flashNum
    56 0000006C EAFFFFEA        B                foreverLoop
    57 00000070         
    58 00000070         
@@ -87,7 +87,7 @@ ARM Macro Assembler    Page 2
    68 00000078         ; R4 = button addr
    69 00000078         ; R5 = button values
    70 00000078         
-   71 00000078 E59F00D8        LDR              R0, =IO1PIN ; load button addr
+   71 00000078 E59F012C        LDR              R0, =IO1PIN ; load button addr
    72 0000007C E5900000        LDR              R0, [R0]    ; load originalValu
                                                             e
    73 00000080 E3A0160F        LDR              R1, =0x00F00000 ; load mask
@@ -103,8 +103,8 @@ ARM Macro Assembler    Page 2
    80 00000098         pressedGetPress                      ; else{
    81 00000098 E3A02001        LDR              R2, =1      ;   isLongPress = 1
                                                             
-   82 0000009C E59F30B8        LDR              R3, =1100000 ;   timerDelay
-   83 000000A0 E59F40B0        LDR              R4, =IO1PIN ;  load button addr
+   82 0000009C E59F310C        LDR              R3, =1100000 ;   timerDelay
+   83 000000A0 E59F4104        LDR              R4, =IO1PIN ;  load button addr
                                                             
    84 000000A4         
    85 000000A4         waitTimeGetPress
@@ -174,57 +174,102 @@ ARM Macro Assembler    Page 3
                                                             = 2'sComplementOf(o
                                                             riginalValue)
   123 0000011C         notNegGetPress                       ;   }
-  124 0000011C         
+  124 0000011C         ; }
   125 0000011C E8BD803E        LDMFD            sp!, {R1-R5, PC}
   126 00000120         
   127 00000120         ;Takes number in R0
-  128 00000120         ;Num in range 
+  128 00000120         ;Num in range (-8 <= x <= 7)
   129 00000120         dispNum
   130 00000120 E92D4006        STMFD            sp!, {R1-R2, LR}
-  131 00000124 E59F1024        LDR              R1, =IO1SET
-  132 00000128 E3A0280F        LDR              R2, =0x000F0000
-  133 0000012C E5812000        STR              R2, [R1]
+  131 00000124 E59F1078        LDR              R1, =IO1SET ; load set reg
+  132 00000128 E3A0280F        LDR              R2, =0x000F0000 ; load mask
+  133 0000012C E5812000        STR              R2, [R1]    ; turn off LEDs usi
+                                                            ng mask
   134 00000130         
-  135 00000130 E59F101C        LDR              R1, =IO1CLR
-  136 00000134 E2800008        ADD              r0, r0, #8
-  137 00000138 E59F2020        ldr              r2, =dispArray
-  138 0000013C E7922000        ldr              r2, [r2, r0]
-  139 00000140 E1A02802        LSL              R2, #16
-  140 00000144 E5812000        STR              R2, [R1]
+  135 00000130 E59F1070        LDR              R1, =IO1CLR ; load clear reg
+  136 00000134 E2800008        ADD              R0, R0, #8  ; 
+  137 00000138 E59F2074        ldr              R2, =dispArray ;
+  138 0000013C E7922000        ldr              R2, [R2, R0] ;
+  139 00000140 E1A02802        LSL              R2, #16     ;
+  140 00000144 E5812000        STR              R2, [R1]    ;
   141 00000148 E8BD8006        LDMFD            sp!, {R1-R2, PC}
-  142 0000014C         
 
 
 
 ARM Macro Assembler    Page 4 
 
 
-  143 0000014C E0028018 
+  142 0000014C         
+  143 0000014C         ;Takes a number in R0
+  144 0000014C         ;Num in range (-8 <= x <= 7)
+  145 0000014C         flashNum
+  146 0000014C E92D401E        STMFD            sp!, {R1-R4, LR}
+  147 00000150 E1A01000        MOV              R1, R0      ; numTmp = num
+  148 00000154 E3A03003        LDR              R3, =3      ; number of flashes
+                                                             = 3
+  149 00000158 E59F4058        LDR              R4, =1000000 ; waitTime
+  150 0000015C         notDoneFlashNum                      ;
+  151 0000015C E3530000        CMP              R3, #0      ; while(number of f
+                                                            lashes > 0)
+  152 00000160 0A000009        BEQ              doneAllFlashNum ; {
+  153 00000164 E2433001        SUB              R3, R3, #1  ;  number of flashe
+                                                            s --
+  154 00000168 E3A00000        LDR              R0, =0      ; load 0 to display
+                                                            
+  155 0000016C EBFFFFEB        BL               dispNum     ; show 0
+  156 00000170 E1A00004        MOV              R0, R4      ; load waitTime
+  157 00000174 EB000005        BL               wait        ; wait(waitTime)
+  158 00000178 E1A00001        MOV              R0, R1      ; num = numTmp
+  159 0000017C EBFFFFE7        BL               dispNum     ; show(num)
+  160 00000180 E1A00004        MOV              R0, R4      ; load waitTime
+  161 00000184 EB000001        BL               wait        ; wait(waitTime)
+  162 00000188 EAFFFFF3        B                notDoneFlashNum ; }
+  163 0000018C         doneAllFlashNum
+  164 0000018C E8BD801E        LDMFD            sp!, {R1-R4, PC}
+  165 00000190         
+  166 00000190         ; wait an amount of cycles 
+  167 00000190         ; R0 = cycles
+  168 00000190         wait
+  169 00000190 E92D4000        STMFD            sp!, {LR}
+  170 00000194         loopWait                             ; while(cycles-- > 
+                                                            0)
+  171 00000194 E2500001        SUBS             R0, R0, #1  ; {
+  172 00000198 1AFFFFFD        BNE              loopWait    ; }
+  173 0000019C E8BD8000        LDMFD            sp!, {PC}
+  174 000001A0         
+  175 000001A0 E0028018 
               E0028014 
               E002801C 
               E0028010 
               0010C8E0 
-              00000000         AREA             TestData, DATA, READWRITE
-  144 00000000         
-  145 00000000         dispArray
-  146 00000000 01              DCB              2_0001
-  147 00000001 09              DCB              2_1001
-  148 00000002 05              DCB              2_0101
-  149 00000003 0D              DCB              2_1101
-  150 00000004 03              DCB              2_0011
-  151 00000005 0B              DCB              2_1011
-  152 00000006 07              DCB              2_0111
-  153 00000007 0F              DCB              2_1111
-  154 00000008 00              DCB              2_0000
-  155 00000009 08              DCB              2_1000
-  156 0000000A 04              DCB              2_0100
-  157 0000000B 0C              DCB              2_1100
-  158 0000000C 02              DCB              2_0010
-  159 0000000D 0A              DCB              2_1010
-  160 0000000E 06              DCB              2_0110
-  161 0000000F 0E              DCB              2_1110
-  162 00000010         
-  163 00000010                 END
+              00000000 
+              000F4240         AREA             TestData, DATA, READWRITE
+  176 00000000         
+  177 00000000         dispArray
+  178 00000000 01              DCB              2_0001
+  179 00000001 09              DCB              2_1001
+  180 00000002 05              DCB              2_0101
+  181 00000003 0D              DCB              2_1101
+  182 00000004 03              DCB              2_0011
+  183 00000005 0B              DCB              2_1011
+  184 00000006 07              DCB              2_0111
+  185 00000007 0F              DCB              2_1111
+  186 00000008 00              DCB              2_0000
+  187 00000009 08              DCB              2_1000
+  188 0000000A 04              DCB              2_0100
+  189 0000000B 0C              DCB              2_1100
+
+
+
+ARM Macro Assembler    Page 5 
+
+
+  190 0000000C 02              DCB              2_0010
+  191 0000000D 0A              DCB              2_1010
+  192 0000000E 06              DCB              2_0110
+  193 0000000F 0E              DCB              2_1110
+  194 00000010         
+  195 00000010                 END
 Command Line: --debug --xref --diag_suppress=9931 --apcs=interwork --depend=.\a
 pp.d -o.\app.o -IC:\Keil_v5\ARM\RV31\INC -IC:\Keil_v5\ARM\CMSIS\Include -IC:\Ke
 il_v5\ARM\Inc\Philips --predefine="__MICROLIB SETA 1" --predefine="__UVISION_VE
@@ -273,11 +318,17 @@ Symbol: dispNum
    Definitions
       At line 129 in file App.s
    Uses
-      At line 37 in file App.s
-      At line 43 in file App.s
-      At line 49 in file App.s
-      At line 55 in file App.s
+      At line 155 in file App.s
+      At line 159 in file App.s
 
+doneAllFlashNum 0000018C
+
+Symbol: doneAllFlashNum
+   Definitions
+      At line 163 in file App.s
+   Uses
+      At line 152 in file App.s
+Comment: doneAllFlashNum used once
 doneWaitGetPress 000000C4
 
 Symbol: doneWaitGetPress
@@ -287,6 +338,23 @@ Symbol: doneWaitGetPress
       At line 87 in file App.s
       At line 98 in file App.s
 
+flashNum 0000014C
+
+
+
+ARM Macro Assembler    Page 2 Alphabetic symbol ordering
+Relocatable symbols
+
+
+Symbol: flashNum
+   Definitions
+      At line 145 in file App.s
+   Uses
+      At line 37 in file App.s
+      At line 43 in file App.s
+      At line 49 in file App.s
+      At line 55 in file App.s
+
 foreverLoop 0000001C
 
 Symbol: foreverLoop
@@ -294,12 +362,6 @@ Symbol: foreverLoop
       At line 20 in file App.s
    Uses
       At line 38 in file App.s
-
-
-
-ARM Macro Assembler    Page 2 Alphabetic symbol ordering
-Relocatable symbols
-
       At line 44 in file App.s
       At line 50 in file App.s
       At line 53 in file App.s
@@ -337,6 +399,20 @@ Symbol: getPress
    Uses
       At line 21 in file App.s
 Comment: getPress used once
+loopWait 00000194
+
+Symbol: loopWait
+   Definitions
+      At line 170 in file App.s
+
+
+
+ARM Macro Assembler    Page 3 Alphabetic symbol ordering
+Relocatable symbols
+
+   Uses
+      At line 172 in file App.s
+Comment: loopWait used once
 mayNegGetPress 00000110
 
 Symbol: mayNegGetPress
@@ -347,6 +423,14 @@ Symbol: mayNegGetPress
       At line 111 in file App.s
       At line 116 in file App.s
 
+notDoneFlashNum 0000015C
+
+Symbol: notDoneFlashNum
+   Definitions
+      At line 150 in file App.s
+   Uses
+      At line 162 in file App.s
+Comment: notDoneFlashNum used once
 notNegGetPress 0000011C
 
 Symbol: notNegGetPress
@@ -359,12 +443,6 @@ Symbol: notNegGetPress
 pressedGetPress 00000098
 
 Symbol: pressedGetPress
-
-
-
-ARM Macro Assembler    Page 3 Alphabetic symbol ordering
-Relocatable symbols
-
    Definitions
       At line 80 in file App.s
    Uses
@@ -391,9 +469,24 @@ stop 00000070
 Symbol: stop
    Definitions
       At line 59 in file App.s
+
+
+
+ARM Macro Assembler    Page 4 Alphabetic symbol ordering
+Relocatable symbols
+
    Uses
       At line 59 in file App.s
 Comment: stop used once
+wait 00000190
+
+Symbol: wait
+   Definitions
+      At line 168 in file App.s
+   Uses
+      At line 157 in file App.s
+      At line 161 in file App.s
+
 waitTimeGetPress 000000A4
 
 Symbol: waitTimeGetPress
@@ -402,7 +495,7 @@ Symbol: waitTimeGetPress
    Uses
       At line 91 in file App.s
 Comment: waitTimeGetPress used once
-18 symbols
+23 symbols
 
 
 
@@ -413,7 +506,7 @@ TestData 00000000
 
 Symbol: TestData
    Definitions
-      At line 143 in file App.s
+      At line 175 in file App.s
    Uses
       None
 Comment: TestData unused
@@ -421,7 +514,7 @@ dispArray 00000000
 
 Symbol: dispArray
    Definitions
-      At line 145 in file App.s
+      At line 177 in file App.s
    Uses
       At line 137 in file App.s
 Comment: dispArray used once
@@ -484,4 +577,4 @@ Symbol: main
       None
 Comment: main unused
 1 symbol
-359 symbols in table
+364 symbols in table
