@@ -31,28 +31,28 @@ foreverLoop
 	;EOR R0, R0, R1
 	
 	
-	CMP R0, #-20
+	CMP R0, #20
 	BNE foreverLoop1
 	LDR R0, =-8
-	BL dispNum
+	BL flashNum
 	B foreverLoop
 foreverLoop1
-	CMP R0, #-21
+	CMP R0, #21
 	BNE foreverLoop2
 	LDR R0, =4
-	BL dispNum
+	BL flashNum
 	B foreverLoop
 foreverLoop2
-	CMP R0, #-22
+	CMP R0, #22
 	BNE foreverLoop3
 	LDR R0, =2
-	BL dispNum
+	BL flashNum
 	B foreverLoop
 foreverLoop3	
-	CMP R0, #-23
+	CMP R0, #23
 	BNE foreverLoop
 	LDR R0, =1
-	BL dispNum
+	BL flashNum
 	B foreverLoop
 
 
@@ -121,24 +121,56 @@ mayNegGetPress			; 		}
 	BEQ notNegGetPress	; 		{
 	NEG R0, R0			; 			originalValue = 2'sComplementOf(originalValue)
 notNegGetPress			; 		}
-
+						;	}
 	LDMFD sp!, {R1-R5, PC}	
 	
 ;Takes number in R0
-;Num in range 
+;Num in range (-8 <= x <= 7)
 dispNum
 	STMFD sp!, {R1-R2, LR}
-	LDR R1, =IO1SET
-	LDR R2, =0x000F0000
-	STR R2, [R1]
+	LDR R1, =IO1SET		; load set reg
+	LDR R2, =0x000F0000	; load mask
+	STR R2, [R1]		; turn off LEDs using mask
 	
-	LDR R1, =IO1CLR
-	ADD r0, r0, #8
-	ldr r2, =dispArray
-	ldr r2, [r2, r0]
-	LSL R2, #16
-	STR R2, [R1]
+	LDR R1, =IO1CLR		; load clear reg
+	ADD R0, R0, #8		; 
+	ldr R2, =dispArray	;
+	ldr R2, [R2, R0]	;
+	LSL R2, #16			;
+	STR R2, [R1]		;
 	LDMFD sp!, {R1-R2, PC}
+	
+;Takes a number in R0
+;Num in range (-8 <= x <= 7)
+flashNum
+	STMFD sp!, {R1-R4, LR}
+	MOV R1, R0			; numTmp = num
+	LDR R3, =3			; number of flashes = 3
+	LDR R4, =1000000	; waitTime
+notDoneFlashNum			;
+	CMP R3, #0			; while(number of flashes > 0)
+	BEQ doneAllFlashNum	; {
+	SUB R3, R3, #1		; 	number of flashes --
+	LDR R0, =0			;	load 0 to display
+	BL dispNum			;	show 0
+	MOV R0, R4			;	load waitTime
+	BL wait				;	wait(waitTime)
+	MOV R0, R1			;	num = numTmp
+	BL dispNum			;	show(num)
+	MOV R0, R4			;	load waitTime
+	BL wait				;	wait(waitTime)
+	B notDoneFlashNum	; }
+doneAllFlashNum
+	LDMFD sp!, {R1-R4, PC}
+	
+; wait an amount of cycles 
+; R0 = cycles
+wait
+	STMFD sp!, {LR}
+loopWait				; while(cycles-- > 0)
+	SUBS R0, R0, #1		; {
+	BNE loopWait		; }
+	LDMFD sp!, {PC}		
 	
 	AREA TestData, DATA, READWRITE
 
