@@ -44,7 +44,7 @@ plusOne					;	}else{
 	B finish       ; }
 decrement               ;
 	CMP R0,#21          ; elif(button == decrease)
-	BNE adder           ;{*******
+	BNE adder           ; {
 	CMP R6,#-8			; 	if(num1<= -8){
 	BGT minusOne		;	
 	MOV R0, R6			;		button = num1
@@ -52,20 +52,28 @@ decrement               ;
 	B foreverLoop		;		B to start
 minusOne				;	}else{	
 	SUB R6,R6,#1        ;		num--
-	B finish            ;}
-adder
-;	CMP R0, #22
-;	BNE subber
-;	CMP R8, #0
-;	BNE adder2
-;	MOV R7, R6
-;	LDR R6, =0
-;	LDR R8, =0
-;	LDR R9, =1 
-;	B finish
-;adder2
-;	ADD R7, R7, 
-
+	B finish            ; }
+adder					;
+;	CMP R0, #22			; elif(button == add) 
+;	BNE subber			; {
+;	CMP R8, #0			; 	if(isFirst)
+;	BNE adder2			;	{
+;	MOV R7, R6			;		num2 = num1
+;	LDR R6, =0			;		num1 = 0
+;	LDR R8, =0			;		isFirst = false
+;	LDR R9, =1 			;		operand = '+'
+;	B finish			;	}
+;adder2					;	else{
+;	CMP R9, #1			;
+;	BNE subOne			;
+;	ADD R7, R7, R6		;
+;	B dispResult
+;subOne					;
+;	SUB R7, R7, R6		;
+;dispResult
+;	MOV R0, R7			;
+;	BL dispNum			;
+;	B foreverLoop 		;
 
 	CMP R0,#22          ;elif(button == add)
 	BNE subber        ;{***********************************************************************************************
