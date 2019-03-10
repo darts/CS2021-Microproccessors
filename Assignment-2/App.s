@@ -28,18 +28,31 @@ IO1PIN	EQU	0xE0028010
 	LDR R2, =IO1CLR
 	LDR R3, =IO1PIN
 	
-	
-foreverLoop
-	BL getPress
-	
-	CMP R0, #0
-	BEQ foreverLoop
 	; R0 = button
+	; R5 = displayingOldResult
 	; R6 = num1
 	; R7 = num2
 	; R8 = first boolean
 	; R9 = operand
-	; R10 = opTmp
+	; R10 = opTmp	
+foreverLoop
+	BL getPress			; button = getPress()
+	
+	CMP R0, #0			; if(button == 0) //nothing pressed
+	BEQ foreverLoop		; {break to top}
+	
+	CMP R5, #1			; if(displayingOldResult)
+	BNE increment		; {
+	CMP R0, #20			;	if( button == increase
+	BEQ clearDisp		;	||
+	CMP R0, #21			;	button == decrease)
+	BNE foreverLoop		;	{
+clearDisp				;		
+	LDR R5, =0			;		displayingOldResult = false
+	LDR R0, =0			;		button = 0
+	BL dispNum			;		dispNum(button)
+	B foreverLoop		;	}else{ break to top }
+						; }else{ continue}
 	
 increment               ;     
 	CMP R0, #20         ; if(button == increase)
@@ -77,6 +90,7 @@ subPressed
 	MOV R9, R10			; 		operand = opTmp
 	B finish			;	}
 mathTwo					;	else{
+	LDR R5, =1			; 	displayingOldResult = true
 	CMP R9, #1			;		if(operand == '+')
 	BNE subOne			;		{
 	ADD R7, R7, R6		;			num2 = num1 + num2
@@ -91,56 +105,29 @@ dispResult				;		}
 	B foreverLoop 		;
 	
 subber
-	CMP R0,#23          ;elif(button == sub)
-	BNE longPressAdd        ;{
-	LDR R10, =0 			;	operand = '-'
+	CMP R0,#23          ; elif(button == sub)
+	BNE longPressAdd    ; {
+	LDR R10, =0 		;	operand = '-'
 	B subPressed		;	break to math section above
 	
-	
 longPressAdd
-	CMP R0,#-22			
-	BNE longPressSub
-	MOV R9,#3
-	MOV R6,#0
-	B finish
-longPressSub
-	CMP R0,#-23
-	BNE finish
-	MOV R6,#0
-	MOV R7,#0
-	MOV R8,#0
-	MOV R9,#0
-	B finish
-finish
-	MOV R0, R6
-	BL dispNum
-	B foreverLoop
+	CMP R0,#-22			; elif(button == clear last)
+	BNE longPressSub	; {
+	MOV R6, R7			;	num1 = num2
+	LDR R8, =1			;	isFirst = true
+	B subPressed		;	break to subPressed
 	
-over	
-	CMP R0, #20
-	BNE foreverLoop1
-	LDR R0, =-8
-	BL flashNum
-	B foreverLoop
-foreverLoop1
-	CMP R0, #21
-	BNE foreverLoop2
-	LDR R0, =4
-	BL flashNum
-	B foreverLoop
-foreverLoop2
-	CMP R0, #22
-	BNE foreverLoop3
-	LDR R0, =2
-	BL flashNum
-	B foreverLoop
-foreverLoop3	
-	CMP R0, #23
-	BNE foreverLoop
-	LDR R0, =1
-	BL flashNum
-	B foreverLoop
-
+longPressSub			 
+	CMP R0,#-23			; elif(button == clear all) 
+	BNE finish			; {
+	LDR R0, =0			;	button = 0
+	BL dispNum			;	dispNum(button)
+	B start				;	reset()
+	
+finish
+	MOV R0, R6			; button = num1
+	BL dispNum			; dispNum(button)
+	B foreverLoop		; }
 
 stop B stop
 
@@ -165,7 +152,7 @@ getPress
 	B nonePressed	; }
 pressedGetPress			; else{
 	LDR R2, =1			; 		isLongPress = 1
-	LDR R3, =1100000	; 		timerDelay
+	LDR R3, =900000	; 		timerDelay
 	LDR R4, =IO1PIN		;		load button addr
 
 waitTimeGetPress
