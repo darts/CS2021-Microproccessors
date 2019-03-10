@@ -8,7 +8,17 @@ IO1DIR	EQU	0xE0028018
 IO1SET	EQU	0xE0028014
 IO1CLR	EQU	0xE002801C
 IO1PIN	EQU	0xE0028010
-	
+	LDR R0, =0
+	LDR R1, =0
+	LDR R2, =0
+	LDR R3, =0
+	LDR R4, =0
+	LDR R5, =0
+	LDR R6, =0
+	LDR R7, =0
+	LDR R8, =1
+	LDR R9, =0
+	LDR R10, =0
 	
 	LDR R1, =IO1DIR
 	LDR R2, =0x000F0000		; select P1.19 through P1.16
@@ -19,7 +29,6 @@ IO1PIN	EQU	0xE0028010
 	LDR R3, =IO1PIN
 	
 	
-	LDR R6, =0
 foreverLoop
 	BL getPress
 	
@@ -30,6 +39,7 @@ foreverLoop
 	; R7 = num2
 	; R8 = first boolean
 	; R9 = operand
+	; R10 = opTmp
 	
 increment               ;     
 	CMP R0, #20         ; if(button == increase)
@@ -54,80 +64,39 @@ minusOne				;	}else{
 	SUB R6,R6,#1        ;		num--
 	B finish            ; }
 adder					;
-;	CMP R0, #22			; elif(button == add) 
-;	BNE subber			; {
-;	CMP R8, #0			; 	if(isFirst)
-;	BNE adder2			;	{
-;	MOV R7, R6			;		num2 = num1
-;	LDR R6, =0			;		num1 = 0
-;	LDR R8, =0			;		isFirst = false
-;	LDR R9, =1 			;		operand = '+'
-;	B finish			;	}
-;adder2					;	else{
-;	CMP R9, #1			;
-;	BNE subOne			;
-;	ADD R7, R7, R6		;
-;	B dispResult
-;subOne					;
-;	SUB R7, R7, R6		;
-;dispResult
-;	MOV R0, R7			;
-;	BL dispNum			;
-;	B foreverLoop 		;
-
-	CMP R0,#22          ;elif(button == add)
-	BNE subber        ;{***********************************************************************************************
-	CMP R8, #0 			;	if(first == true)
-	BNE adder2			;		{
-	MOV R7,R6			;			num2 = num1
-	MOV R6,#0			;			num1 =0
-	;//clear display code goes here ; display
-	MOV R8, #1			;			first = false;	
-	B endAdd			;	}
-adder2					;	else {
-	CMP R9,#0			;		if(operand == 0)
-	BNE insub			;		{
-	ADD R7,R6,R7		;		num2 = num1 + num2	
-	MOV R6,#0			; 		num1 = 0
-	;//displaythis		;   	display result
-	B endAdd			;		}
-insub
-	CMP R9,#1			;		elif(operand == 1)
-	BNE subber			;		{
-	SUB R7,R7,R6		;			num2 = num2-num1
-	MOV R6,#0			;			num1 = 0;
-	;//display			;			displayResult;
-	B endAdd			;		}
-endAdd
-	MOV R9,#0    		;		operand = 0;
-	B finish			;}
+	CMP R0, #22			; elif(button == add) 
+	BNE subber			; {
+	LDR R10, =1 		;	opTmp = '+'
+	
+subPressed	
+	CMP R8, #0			; 	if(isFirst)
+	BEQ mathTwo			;	{
+	MOV R7, R6			;		num2 = num1
+	LDR R6, =0			;		num1 = 0
+	LDR R8, =0			;		isFirst = false
+	MOV R9, R10			; 		operand = opTmp
+	B finish			;	}
+mathTwo					;	else{
+	CMP R9, #1			;		if(operand == '+')
+	BNE subOne			;		{
+	ADD R7, R7, R6		;			num2 = num1 + num2
+	B dispResult		;			break to display
+subOne					;		}else{
+	SUB R7, R7, R6		;			num2 = num2 - num1
+dispResult				;		}
+	LDR R6, =0			;		num1 = 0
+	MOV R0, R7			;		button = num2
+	BL dispNum			;		dispNum(button)
+	MOV R9, R10			; 		operand = opTmp
+	B foreverLoop 		;
+	
 subber
 	CMP R0,#23          ;elif(button == sub)
 	BNE longPressAdd        ;{
-	CMP R8, #0 			;	if(first == true)
-	BNE subber2			;		{
-	MOV R7,R6			;			num2 = num1
-	MOV R6,#0			;			num1 =0
-	;//clear display code goes here ; display
-	MOV R8, #1			;			first = false;	
-	B endsub			;	}
-subber2					;	else {
-	CMP R9,#0			;		if(operand == 0)
-	BNE insub1			;		{
-	ADD R7,R6,R7		;		num2 = num1 + num2	
-	MOV R6,#0			; 		num1 = 0
-	;//displaythis		;   	display result
-	B endsub			;		}
-insub1
-	CMP R9,#1			;		elif(operand == 1)
-	BNE subber			;		{
-	SUB R7,R7,R6		;			num2 = num2-num1
-	MOV R6,#0			;			num1 = 0;
-	;//display			;			displayResult;
-	B endsub			;		}
-endsub
-	MOV R9,#1    		;		operand = 1;
-	B finish			;}
+	LDR R10, =0 			;	operand = '-'
+	B subPressed		;	break to math section above
+	
+	
 longPressAdd
 	CMP R0,#-22			
 	BNE longPressSub
