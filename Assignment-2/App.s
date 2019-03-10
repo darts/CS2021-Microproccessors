@@ -115,7 +115,7 @@ longPressAdd
 	BNE longPressSub	; {
 	MOV R6, R7			;	num1 = num2
 	LDR R8, =1			;	isFirst = true
-	B subPressed		;	break to subPressed
+	B finish			; }
 	
 longPressSub			 
 	CMP R0,#-23			; elif(button == clear all) 
