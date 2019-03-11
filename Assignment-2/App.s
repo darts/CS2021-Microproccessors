@@ -8,6 +8,7 @@ IO1DIR	EQU	0xE0028018
 IO1SET	EQU	0xE0028014
 IO1CLR	EQU	0xE002801C
 IO1PIN	EQU	0xE0028010
+
 	LDR R0, =0
 	LDR R1, =0
 	LDR R2, =0
@@ -40,6 +41,9 @@ foreverLoop
 	
 	CMP R0, #0			; if(button == 0) //nothing pressed
 	BEQ foreverLoop		; {break to top}
+	
+	CMP R0, #-23		; if(button == reset)
+	BEQ start			; {reset()}
 	
 	CMP R5, #1			; if(displayingOldResult)
 	BNE increment		; {
@@ -112,17 +116,11 @@ subber
 	
 longPressAdd
 	CMP R0,#-22			; elif(button == clear last)
-	BNE longPressSub	; {
+	BNE finish	; {
 	MOV R6, R7			;	num1 = num2
 	LDR R8, =1			;	isFirst = true
 	B finish			; }
-	
-longPressSub			 
-	CMP R0,#-23			; elif(button == clear all) 
-	BNE finish			; {
-	LDR R0, =0			;	button = 0
-	BL dispNum			;	dispNum(button)
-	B start				;	reset()
+
 	
 finish
 	MOV R0, R6			; button = num1
@@ -152,7 +150,7 @@ getPress
 	B nonePressed	; }
 pressedGetPress			; else{
 	LDR R2, =1			; 		isLongPress = 1
-	LDR R3, =900000	; 		timerDelay
+	LDR R3, =600000	; 		timerDelay
 	LDR R4, =IO1PIN		;		load button addr
 
 waitTimeGetPress
