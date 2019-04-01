@@ -90,7 +90,7 @@ start
 	LDR R0, =IO0SET			; load the pin addr
 	STR R1, [R0]			; store mask in pin addr
 
-	LDR R0, =200  			; init counter
+	LDR R0, =100  			; init counter
 	LDR R2, =Green			; first colour = green
 	LDR R3, =IO0CLR			; load register for turning on LED's
 	STR R2, [R3]			; setColour(green)
@@ -102,7 +102,7 @@ foreverLoop					; while(true){
 	LDR R1, [R1]			; 		timerCounter = loadCounter(counterAddr)
 	CMP R0, R1 				;		if(counter < timerCounter) 
 	BGT foreverLoop			;			continue
-	ADD R0, R0, #200		;		counter += 200 //add one second
+	ADD R0, R0, #100		;		counter += 200 //add one second
 							;
 	STR R5, [R4]			;		clearLEDs(clearingMask)
 							;
@@ -137,10 +137,11 @@ irqhan	sub	lr,lr,#4
 
 ;here you'd put the unique part of your interrupt handler
 ;all the other stuff is "housekeeping" to save registers and acknowledge interrupts
-	LDR R0, =noOfCycles
-	LDR R1, [R0]
-	ADD R1, R1, #1
-	STR R1, [R0]
+
+	LDR R0, =noOfCycles		; load noOfCycles
+	LDR R1, [R0]			; ^^
+	ADD R1, R1, #1			; noOfCycles++
+	STR R1, [R0]			; store updated number of cycles
 
 ;this is where we stop the timer from making the interrupt request to the VIC
 ;i.e. we 'acknowledge' the interrupt
