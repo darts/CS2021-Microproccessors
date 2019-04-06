@@ -80,8 +80,9 @@ start
 ; timer initialisation done
 
 ;process initialisation time
+    STMFD sp!, {R0-R12}
+    LDR 
 
-    
 ;from here, initialisation is finished, so it should be the main body of the main program
 	
 	; Set pins P0.17, P0.18 and P0.21 as outputs
