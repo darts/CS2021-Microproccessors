@@ -36,7 +36,7 @@ Red EQU 0x00020000
 Green EQU 0x00200000
 Blue EQU 0x00040000
 	
-
+CPSR_Mask EQU 0xFFFFFFF0
 	
 	AREA	InitialisationAndMain, CODE, READONLY
 	IMPORT	main
@@ -81,7 +81,24 @@ start
 
 ;process initialisation time
     STMFD sp!, {R0-R12}
-    LDR 
+    LDR R0, =procAStack
+    LDR R1, 0           ;R14 *********
+    LDR R15,            ;First line of process??
+    MOV R3, CPSR
+    LDR R4, =CPSR_Mask
+    AND R3, R3, R4      ;change to user mode
+    STMFD sp!, {R0-R3}
+
+    STMFD sp!, {R0-R12}
+    LDR R0, =procBStack
+    LDR R1, 0           ;R14 *********
+    LDR R15,            ;First line of process??
+    MOV R3, CPSR
+    LDR R4, =CPSR_Mask
+    AND R3, R3, R4      ;change to user mode
+    STMFD sp!, {R0-R3}
+
+
 
 ;from here, initialisation is finished, so it should be the main body of the main program
 	
