@@ -99,8 +99,6 @@ start
 	;done making stack full decending
 	LDR R1, =LEDTime           ;R14 *********
 	STMFA sp!, {R0,R1}
-	
-	;STMFA sp!, {R1}
     STMFA sp!, {R0-R12}
 	LDR R3, =0			;CPSR flags are null
     STMFA sp!, {R3}
@@ -117,21 +115,19 @@ start
 	;done making stack full decending
 	LDR R1, =CalcTime           ;R14 *********
 	STMFA sp!, {R0,R1}
-	
-	;STMFA sp!, {R1}
     STMFA sp!, {R0-R12}
 	LDR R3, =0			;CPSR flags are null
     STMFA sp!, {R3}
 	ADD R0, R13, #StdStackOffset
 	ADD R0, R0, #4
 	STMFA sp!, {R0}
-
+    
 
 	;point back to first
 	LDMFA SP!, {R0}
 	LDR R0, =IRQStack
 	ADD R0, R0, #StdStackOffset
-	SUB R0, R0, #4
+	;SUB R0, R0, #4
 	STMFA sp!, {R0}
 	
 	
@@ -454,13 +450,15 @@ loopWait				; while(cycles-- > 0)
 
 
 	AREA	InterruptStuff, CODE, READONLY
-irqhan	sub	lr,lr,#4
-	LDR SP, =IRQSP
-	LDR SP, [SP]
-	ADD SP, #(2*4)
+irqhan	
+	sub	lr,lr,#4			;lr adjust
+	LDR SP, =IRQSP			;load sp
+	LDR SP, [SP]			;^^
+	ADD SP, #8				
 	stmfa sp!,{r0-r12}
 	MRS R0, CPSR				; save CPSR
 	STMFA SP!, {R0}			; save CPSR 
+	SUB SP, SP, #(16 * 4)
 	
 	;***********************************************
 	LDR R0, =noOfCycles		; load noOfCycles
@@ -480,7 +478,7 @@ irqhan	sub	lr,lr,#4
 	str	r1,[r0,#VectAddr]	; reset VIC
 	;**********************************************
 	
-	SUB SP, SP, #(16 * 4)
+	
 	
 	MOV R0, SP					; spTMP = IRQSP
 	MOV R2, LR					; lrTMP = LR
@@ -495,12 +493,12 @@ irqhan	sub	lr,lr,#4
 	ADD R0, R0, #(15 * 4)				; sp++ //get to new sp location pointer
 	LDR SP, [R0]				; sp = pointer to next thread
 	
-	LDR R0, =IRQSP			
-	STR SP, [R0]
+	LDR R0, =IRQSP				;
+	STR SP, [R0]				;
 	
-	LDR R1, [R0]
-	SUB R1, R1, #0x40
-	STR R1, [R0]
+	LDR R1, [R0]				;compensate for pointer alignment
+	SUB R1, R1, #(4 * 16)		;^^^
+	STR R1, [R0]				;^^^
 	
 	;SUB SP, SP, #(2*4)
 	LDMFA sp!, {R0}			;load thread CPSR
