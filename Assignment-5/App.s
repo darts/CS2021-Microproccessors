@@ -41,7 +41,8 @@ IO1SET	EQU	0xE0028014
 IO1CLR	EQU	0xE002801C
 IO1PIN	EQU	0xE0028010
 	
-StdStackOffset EQU 0x40 
+StdStackOffset EQU 0x40 ;16 registers/words
+SPStackOffset EQU 0x3C  ;15 registers/words
 	
 	AREA	InitialisationAndMain, CODE, READONLY
 	IMPORT	main
@@ -86,67 +87,68 @@ start
 
 ;process initialisation time
 
+	LDR R13, =IRQStack  ;fancy new stack for a fancy new dame (interrupt handler)
+
+    ;each thread is stored in the LL as follows:
+    ; | SP | LR/PC | REG:0-12 | CPSR |
+
 	
-	;MSR CPSR_C, #12 ;switch to IRQ mode for stack access
-	LDR R13, =IRQStack  ;fancy new stack for a fancy new dame
-	
-	
-	LDR R0, =procAStack ;new stack
-	;make stack full decending
+	;THREAD A ***************************************************
+	LDR R0, =procAStack         ;new stack
+	;***************************;make stack full decending
 	LDR R1, =stackSize
 	LDR R1, [R1]
 	ADD R0, R0, R1
-	;done making stack full decending
-	LDR R1, =LEDTime           ;R14 *********
-	STMFA sp!, {R0,R1}
-    STMFA sp!, {R0-R12}
-	LDR R3, =0			;CPSR flags are null
-    STMFA sp!, {R3}
-	ADD R0, R13, #StdStackOffset
-	ADD R0, R0, #4
-	STMFA sp!, {R0}
+	;***************************;done making stack full decending
+	LDR R1, =LEDTime            ;load first line to LR
+	STMFA sp!, {R0,R1}          ;store SP and LR
+    STMFA sp!, {R0-R12}         ;store registers
+	LDR R3, =0			        ;CPSR flags are null
+    STMFA sp!, {R3}             ;store CPSR
+	ADD R0, R13, #StdStackOffset;create pointer to next thread
+	ADD R0, R0, #4              ;modify pointer
+	STMFA sp!, {R0}             ;store pointer
+    ;THREAD A ***************************************************
 
 
-	LDR R0, =procBStack ;new stack
-	;make stack full decending
+    ;THREAD B ***************************************************
+	LDR R0, =procBStack         ;new stack
+	;***************************;make stack full decending
 	LDR R1, =stackSize
 	LDR R1, [R1]
 	ADD R0, R0, R1
-	;done making stack full decending
-	LDR R1, =CalcTime           ;R14 *********
-	STMFA sp!, {R0,R1}
-    STMFA sp!, {R0-R12}
-	LDR R3, =0			;CPSR flags are null
-    STMFA sp!, {R3}
-	ADD R0, R13, #StdStackOffset
-	ADD R0, R0, #4
-	STMFA sp!, {R0}
-    
+	;***************************;done making stack full decending
+	LDR R1, =CalcTime           ;load first line to LR
+	STMFA sp!, {R0,R1}          ;store SP and LR
+    STMFA sp!, {R0-R12}         ;store registers
+	LDR R3, =0			        ;CPSR flags are null
+    STMFA sp!, {R3}             ;store CPSR
+	ADD R0, R13, #StdStackOffset;create pointer to next thread
+	ADD R0, R0, #4              ;modify pointer
+	STMFA sp!, {R0}             ;store pointer
+    ;THREAD B ***************************************************
 
-	;point back to first
-	LDMFA SP!, {R0}
-	LDR R0, =IRQStack
-	ADD R0, R0, #StdStackOffset
-	;SUB R0, R0, #4
-	STMFA sp!, {R0}
+
+
+	;point last thread back to first
+	LDMFA SP!, {R0}             ;pop existing pointer
+	LDR R0, =IRQStack           ;load start addr
+	ADD R0, R0, #StdStackOffset ;modify offset to point at end
+	STMFA sp!, {R0}             ;store new pointer
+    ;done pointing last thread back to first
 	
 	
 	;add blank space for first run
-	ADD SP, SP, #StdStackOffset
-	LDR R0, =IRQStack
-	
-	
-	ADD R0, R0, #StdStackOffset
-
-	
-	STMFA sp!, {R0}
-	
-	
-	SUB SP, SP, #StdStackOffset
-	SUB SP, SP, #4
-	
-	LDR R0, =IRQSP
-	STR SP, [R0]
+	ADD SP, SP, #StdStackOffset ;space where registers would be
+	LDR R0, =IRQStack           ;load pointer to first thread
+	ADD R0, R0, #StdStackOffset ;modify pointer to point at end of first thread
+	STMFA sp!, {R0}             ;store pointer
+    ;go back so registers can be stored when IRQ occurs
+	SUB SP, SP, #StdStackOffset ;move pointer so regs can be stored
+	SUB SP, SP, #4              ;^^^
+    
+	LDR R0, =IRQSP              ;load address of stored SP
+	STR SP, [R0]                ;save SP @ addr
 	
 doneThreadSetup B doneThreadSetup
 
@@ -451,14 +453,14 @@ loopWait				; while(cycles-- > 0)
 
 	AREA	InterruptStuff, CODE, READONLY
 irqhan	
-	sub	lr,lr,#4			;lr adjust
-	LDR SP, =IRQSP			;load sp
-	LDR SP, [SP]			;^^
-	ADD SP, #8				
-	stmfa sp!,{r0-r12}
-	MRS R0, CPSR				; save CPSR
-	STMFA SP!, {R0}			; save CPSR 
-	SUB SP, SP, #(16 * 4)
+	sub	lr,lr,#4			    ;lr adjust
+	LDR SP, =IRQSP			    ;load sp
+	LDR SP, [SP]			    ;^^
+	ADD SP, #8				    ;modify so R0-12 can be stored
+	stmfa sp!,{r0-r12}          ;store registers
+	MRS R0, CPSR			    ; read CPSR
+	STMFA SP!, {R0}			    ; save CPSR 
+	SUB SP, SP, #StdStackOffset ; go back to write SP and LR 
 	
 	;***********************************************
 	LDR R0, =noOfCycles		; load noOfCycles
@@ -478,64 +480,31 @@ irqhan
 	str	r1,[r0,#VectAddr]	; reset VIC
 	;**********************************************
 	
-	
-	
 	MOV R0, SP					; spTMP = IRQSP
 	MOV R2, LR					; lrTMP = LR
 	
 	MSR CPSR_C, #0x1F 			; switch to system mode
 	
-	MOV R1, SP
+	MOV R1, SP                  ; spToWrite = user.SP
+	STMFA R0!, {R1,R2}			; save user.SP and LR
 	
-	STMFA R0!, {R1,R2}				; save SP
 	
-	
-	ADD R0, R0, #(15 * 4)				; sp++ //get to new sp location pointer
+	ADD R0, R0, #SPStackOffset  ; sp++ //get to new sp location pointer
 	LDR SP, [R0]				; sp = pointer to next thread
 	
-	LDR R0, =IRQSP				;
-	STR SP, [R0]				;
+	LDR R0, =IRQSP				; load address of stored SP 
+	STR SP, [R0]				; save IRQ SP at address
 	
-	LDR R1, [R0]				;compensate for pointer alignment
+	LDR R1, [R0]				;compensate for stack pointer alignment
 	SUB R1, R1, #(4 * 16)		;^^^
 	STR R1, [R0]				;^^^
 	
-	;SUB SP, SP, #(2*4)
-	LDMFA sp!, {R0}			;load thread CPSR
+	LDMFA sp!, {R0}			    ;load thread CPSR
 	
-	MSR CPSR_f, R0			;write thread CPSR
+	MSR CPSR_f, R0			    ;write thread CPSR
 	
-	LDMFA SP!, {R0-R12}		;load all the registers
-	LDMFA SP, {SP, PC}
-	
-	
-	
-	ADD SP, SP, #(16*4)
-	;LDMFD SP!
-	
-	
-	
-	
-
-	
-	
-	
-	
-
-;this is the body of the interrupt handler
-
-;here you'd put the unique part of your interrupt handler
-;all the other stuff is "housekeeping" to save registers and acknowledge interrupts
-	
-
-
-
-	
-
-	ldmfa	sp!,{r0-r1,pc}^	; return from interrupt, restoring pc from lr
-				; and also restoring the CPSR
-
-
+	LDMFA SP!, {R0-R12}		    ;load all the registers
+	LDMFA SP, {SP, PC}          ;load SP and LR
 		
 		
 	AREA StoreData, DATA, READWRITE
